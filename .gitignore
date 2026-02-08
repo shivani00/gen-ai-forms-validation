@@ -1,0 +1,39 @@
+node_modules/
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+bin/
+include/
+lib/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / Packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+*.whl
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IDE specific (optional)
+.vscode/
+.idea/
