@@ -3,7 +3,7 @@ uvicorn
 python-docx
 pillow
 pytesseract
-pdf2image
+pymupdf
 python-multipart
 python-dotenv
-google-genai
+google-generativeai
