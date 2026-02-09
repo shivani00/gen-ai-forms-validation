@@ -46,3 +46,4 @@ def extract_pdf_ocr(pdf_path):
 
     logger.info(f"🧠 Total tokens collected: {len(ocr)}")
     return ocr
+  
