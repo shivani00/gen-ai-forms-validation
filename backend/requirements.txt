@@ -6,4 +6,4 @@ pytesseract
 pdf2image
 python-multipart
 python-dotenv
-google-genai
+google-generativeai

@@ -72,3 +72,4 @@ def extract_layout_from_word(word_path):
         "markers": markers,
         "mapping": position_to_tag
     }
+    

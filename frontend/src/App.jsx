@@ -67,7 +67,7 @@ export default function App() {
                       style={{ width: `${Math.round(r.confidence * 100)}%` }}
                     />
                   </div>
-                  <small>Confidence: {Math.round(r.confidence * 100)}%</small>
+                  {/* <small>Confidence: {Math.round(r.confidence * 100)}%</small> */}
                 </>
               )}
 
