@@ -155,3 +155,4 @@ def validate(layout, expected_json, pdf_ocr):
         })
 
     return results
+    
