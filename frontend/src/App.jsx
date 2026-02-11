@@ -3,79 +3,144 @@ import { validateFiles } from "./api";
 import "./styles.css";
 
 export default function App() {
-  const [result, setResult] = useState(null);
+  const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [pdfFile, setPdfFile] = useState(null);
+  const [formNumber, setFormNumber] = useState("");
 
-  async function submit(e) {
+  function handleFileChange(e) {
+    setPdfFile(e.target.files[0]);
+  }
+
+  async function handleSubmit(e) {
     e.preventDefault();
+
+    if (!pdfFile || !formNumber.trim()) {
+      alert("Please enter form number and upload PDF.");
+      return;
+    }
+
+    // User message
+    setMessages(prev => [
+      ...prev,
+      { sender: "user", text: `📤 Validate Form: ${formNumber}` }
+    ]);
+
     setLoading(true);
-    const fd = new FormData(e.target);
-    const res = await validateFiles(fd);
-    setResult(res);
-    setLoading(false);
+
+    const fd = new FormData();
+    fd.append("pdf", pdfFile);
+    fd.append("form_id", formNumber);
+
+    try {
+      const res = await validateFiles(fd);
+
+      setMessages(prev => [
+        ...prev,
+        { sender: "bot", result: res }
+      ]);
+    } catch (err) {
+      setMessages(prev => [
+        ...prev,
+        { sender: "bot", text: "❌ Validation failed. Please check backend." }
+      ]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
-    <div className="card">
-      <h2>📄 Insurance PDF Validator</h2>
-      <p className="subtitle">
-        Upload the filled PDF, layout specification, and expected JSON to validate insurance forms.
-      </p>
+    <div className="chat-wrapper">
+      <h2 className="chat-title">🤖 AI Document Validation</h2>
 
-      <form onSubmit={submit}>
-        <div className="input-group">
-          <label>📄 Insurance PDF (Filled Form)</label>
-          <input type="file" name="pdf" required />
-          <small>Example: insurance_forms.pdf</small>
-        </div>
+      <div className="chat-container">
+        <div className="chat-box">
 
-        <div className="input-group">
-          <label>📝 Word Layout Spec (Positions Only)</label>
-          <input type="file" name="word" required />
-          <small>Example: ABC123_spec.docx</small>
-        </div>
+          {messages.length === 0 && (
+            <div className="empty-state">
+              Enter the form to validate and upload the PDF.
+            </div>
+          )}
 
-        <div className="input-group">
-          <label>🧾 Expected Data (JSON)</label>
-          <input type="file" name="data" required />
-          <small>Example: ABC123.json</small>
-        </div>
+          {messages.map((msg, index) => (
+            <div key={index} className={`message ${msg.sender}`}>
 
-        <button disabled={loading}>
-          {loading ? "Validating…" : "Validate Document"}
-        </button>
-      </form>
+              {msg.text && <p>{msg.text}</p>}
 
-      {result && (
-        <div className="results">
-          <h3>✅ Validation Results</h3>
+              {msg.result && (
+                <div className="result-block">
+                  <h4>
+                    {msg.result.summary?.failed === 0
+                      ? "✅ Document Passed"
+                      : "❌ Document Failed"}
+                  </h4>
 
-          {result.results.map((r, i) => (
-            <div key={i} className="result-card">
-              <div className="result-header">
-                <strong>{r.tag}</strong>
-                <span className={`status ${r.status === "PASS" ? "pass" : "fail"}`}>
-                  {r.status}
-                </span>
-              </div>
+                  {/* Failed Fields */}
+                  {msg.result.failed_fields?.length > 0 && (
+                    <>
+                      <p className="section-title">❌ Failed Fields</p>
+                      <ul>
+                        {msg.result.failed_fields.map((f, i) => (
+                          <li key={i}>{f.tag}</li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
 
-              {r.confidence !== undefined && (
-                <>
-                  <div className="confidence-bar">
-                    <div
-                      className="confidence-fill"
-                      style={{ width: `${Math.round(r.confidence * 100)}%` }}
-                    />
-                  </div>
-                  {/* <small>Confidence: {Math.round(r.confidence * 100)}%</small> */}
-                </>
+                  {/* Passed Fields */}
+                  {msg.result.passed_fields?.length > 0 && (
+                    <>
+                      <p className="section-title">✅ Passed Fields</p>
+                      <ul>
+                        {msg.result.passed_fields.map((f, i) => (
+                          <li key={i}>{f.tag}</li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                </div>
               )}
 
-              <p className="explanation">{r.explanation}</p>
             </div>
           ))}
+
+          {loading && (
+            <div className="message bot">
+              <p>🔎 Validating document...</p>
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Upload + Form Input */}
+        <form className="upload-panel" onSubmit={handleSubmit}>
+
+          <div className="upload-group">
+            <label>🔢 Enter the form to validate:</label>
+            <input
+              type="text"
+              placeholder="e.g., DEF344"
+              value={formNumber}
+              onChange={(e) => setFormNumber(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="upload-group">
+            <label>📄 Upload Filled Insurance Form (PDF)</label>
+            <input
+              type="file"
+              accept=".pdf"
+              onChange={handleFileChange}
+              required
+            />
+          </div>
+
+          <button type="submit" disabled={loading}>
+            {loading ? "Validating…" : "Validate"}
+          </button>
+
+        </form>
+      </div>
     </div>
   );
 }
