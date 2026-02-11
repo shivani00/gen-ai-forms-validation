@@ -1,0 +1,17 @@
+{
+  "customer": {
+    "name": "Rahul Sharma",
+    "address": {
+      "home": "221B Baker Street, London"
+    }
+  },
+  "policy": {
+    "name": "Home Secure ABC123",
+    "number": "ABC123",
+    "effective_date": "20-12-2016",
+    "premium": {
+      "amount": "12000",
+      "currency": "INR"
+    }
+  }
+}
