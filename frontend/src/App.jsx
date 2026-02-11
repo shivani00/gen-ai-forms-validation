@@ -1,81 +1,324 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { validateFiles } from "./api";
 import "./styles.css";
 
-export default function App() {
-  const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(false);
+import { Doughnut } from "react-chartjs-2";
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
+ChartJS.register(ArcElement, Tooltip, Legend);
 
-  async function submit(e) {
-    e.preventDefault();
-    setLoading(true);
-    const fd = new FormData(e.target);
-    const res = await validateFiles(fd);
-    setResult(res);
-    setLoading(false);
+/* =========================================
+   Typing Animation Component
+========================================= */
+function TypingMessage({ text }) {
+  const [displayed, setDisplayed] = useState("");
+
+  useEffect(() => {
+    let i = 0;
+    const interval = setInterval(() => {
+      setDisplayed(text.slice(0, i));
+      i++;
+      if (i > text.length) clearInterval(interval);
+    }, 20);
+
+    return () => clearInterval(interval);
+  }, [text]);
+
+  return <p>{displayed}</p>;
+}
+
+/* =========================================
+   Main App
+========================================= */
+export default function App() {
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [pdfFile, setPdfFile] = useState(null);
+  const [formNumber, setFormNumber] = useState("ABC123");
+  const [darkMode, setDarkMode] = useState(false);
+
+  const forms = ["ABC123", "DEF344", "GHI567", "JKL890", "MNO222"];
+
+  /* =========================================
+     File Change
+  ========================================= */
+  function handleFileChange(e) {
+    setPdfFile(e.target.files[0]);
   }
 
+  /* =========================================
+     Submit Validation
+  ========================================= */
+  async function handleSubmit(e) {
+    e.preventDefault();
+
+    if (!pdfFile) {
+      alert("Please upload PDF.");
+      return;
+    }
+
+    setMessages(prev => [
+      ...prev,
+      { sender: "user", text: `📤 Validate Form: ${formNumber}` }
+    ]);
+
+    setLoading(true);
+
+    const fd = new FormData();
+    fd.append("pdf", pdfFile);
+    fd.append("form_id", formNumber);
+
+    try {
+      const res = await validateFiles(fd);
+
+      setMessages(prev => [
+        ...prev,
+        { sender: "bot", result: res }
+      ]);
+    } catch {
+      setMessages(prev => [
+        ...prev,
+        { sender: "bot", text: "❌ Validation failed. Please check backend." }
+      ]);
+    } finally {
+      setLoading(false);
+      setPdfFile(null); // reset file input
+    }
+  }
+
+  /* =========================================
+     New Validation (Clean Reset)
+  ========================================= */
+  function handleNewValidation() {
+    setMessages([]);
+    setPdfFile(null);
+  }
+
+  /* =========================================
+     Dark / Light Mode Toggle
+  ========================================= */
+  function handleThemeToggle() {
+    setDarkMode(prev => !prev);
+    document.body.classList.toggle("dark-mode");
+  }
+
+  /* =========================================
+     UI
+  ========================================= */
   return (
-    <div className="card">
-      <h2>📄 Insurance PDF Validator</h2>
-      <p className="subtitle">
-        Upload the filled PDF, layout specification, and expected JSON to validate insurance forms.
-      </p>
+    <div className="chat-wrapper">
 
-      <form onSubmit={submit}>
-        <div className="input-group">
-          <label>📄 Insurance PDF (Filled Form)</label>
-          <input type="file" name="pdf" required />
-          <small>Example: insurance_forms.pdf</small>
-        </div>
+      {/* Dark Mode Toggle */}
+      <button className="dark-toggle" onClick={handleThemeToggle}>
+        {darkMode ? "🌞 Light" : "🌙 Dark"}
+      </button>
 
-        <div className="input-group">
-          <label>📝 Word Layout Spec (Positions Only)</label>
-          <input type="file" name="word" required />
-          <small>Example: ABC123_spec.docx</small>
-        </div>
+      <div className="chat-title">
+        ✨ Insurance Form Validator
+      </div>
 
-        <div className="input-group">
-          <label>🧾 Expected Data (JSON)</label>
-          <input type="file" name="data" required />
-          <small>Example: ABC123.json</small>
-        </div>
+      <div className="chat-container">
 
-        <button disabled={loading}>
-          {loading ? "Validating…" : "Validate Document"}
-        </button>
-      </form>
+        {/* ================= CHAT SECTION ================= */}
+        <div className="chat-box">
 
-      {result && (
-        <div className="results">
-          <h3>✅ Validation Results</h3>
+          {messages.map((msg, index) => (
+            <div key={index} className={`message ${msg.sender}`}>
 
-          {result.results.map((r, i) => (
-            <div key={i} className="result-card">
-              <div className="result-header">
-                <strong>{r.tag}</strong>
-                <span className={`status ${r.status === "PASS" ? "pass" : "fail"}`}>
-                  {r.status}
-                </span>
-              </div>
+              {/* Text Messages */}
+              {msg.text &&
+                (msg.sender === "bot" ? (
+                  <TypingMessage text={msg.text} />
+                ) : (
+                  <p>{msg.text}</p>
+                ))}
 
-              {r.confidence !== undefined && (
-                <>
-                  <div className="confidence-bar">
-                    <div
-                      className="confidence-fill"
-                      style={{ width: `${Math.round(r.confidence * 100)}%` }}
+              {/* ================= RESULT CARD ================= */}
+              {msg.result && (
+                <div className={`result-card ${darkMode ? "dark-result" : ""}`}>
+
+                  {/* STATUS */}
+                  <div className="status-header">
+                    <span
+                      className={`status-badge ${
+                        msg.result.summary?.failed === 0 ? "success" : "fail"
+                      }`}
+                    >
+                      {msg.result.summary?.failed === 0
+                        ? "✅ FORM VALIDATION PASSED"
+                        : "❌ FORM VALIDATION FAILED"}
+                    </span>
+                  </div>
+
+                  {/* SUMMARY GRID */}
+                  <div className="summary-grid">
+                    <div>
+                      Total<br />
+                      <strong>{msg.result.summary?.total_fields}</strong>
+                    </div>
+                    <div>
+                      Passed<br />
+                      <strong>{msg.result.summary?.passed}</strong>
+                    </div>
+                    <div>
+                      Failed<br />
+                      <strong>{msg.result.summary?.failed}</strong>
+                    </div>
+                  </div>
+
+                  {/* DONUT CHART */}
+                  <div className="chart-wrapper">
+                    <Doughnut
+                      data={{
+                        labels: ["Passed", "Failed"],
+                        datasets: [
+                          {
+                            data: [
+                              msg.result.summary?.passed || 0,
+                              msg.result.summary?.failed || 0
+                            ],
+                            backgroundColor: ["#16a34a", "#dc2626"]
+                          }
+                        ]
+                      }}
+                      options={{
+                        cutout: "65%",
+                        plugins: { legend: { position: "bottom" } }
+                      }}
                     />
                   </div>
-                  {/* <small>Confidence: {Math.round(r.confidence * 100)}%</small> */}
-                </>
-              )}
 
-              <p className="explanation">{r.explanation}</p>
+                  {/* FAILED FIELDS */}
+                  {msg.result.failed_fields?.length > 0 && (
+                    <div className="failed-section">
+                      <h4>❌ Failed Fields</h4>
+
+                      {msg.result.failed_fields.map((f, i) => (
+                        <div key={i} className="field-card fail-card">
+
+                          <div className="field-header">
+                            <strong>{f.tag}</strong>
+                            <span className="fail-text">FAILED</span>
+                          </div>
+
+                          <div className="value-section">
+                            <p>
+                              <strong>Expected:</strong>{" "}
+                              {f.expected || "—"}
+                            </p>
+                            <p>
+                              <strong>Extracted:</strong>{" "}
+                              {f.extracted || "—"}
+                            </p>
+                          </div>
+
+                          {f.reason && (
+                            <p className="reason">
+                              <strong>Reason:</strong> {f.reason}
+                            </p>
+                          )}
+
+                          {f.confidence !== undefined && (
+                            <div className="confidence-wrapper">
+                              <div className="confidence-bar">
+                                <div
+                                  className="confidence-fill"
+                                  style={{
+                                    width: `${Math.round(f.confidence * 100)}%`
+                                  }}
+                                />
+                              </div>
+                              <small>
+                                Confidence: {Math.round(f.confidence * 100)}%
+                              </small>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* PASSED FIELDS */}
+                  {msg.result.passed_fields?.length > 0 && (
+                    <div className="passed-section">
+                      <h4>✅ Passed Fields</h4>
+
+                      {msg.result.passed_fields.map((f, i) => (
+                        <div key={i} className="field-card pass-card">
+                          <div className="field-header">
+                            <strong>{f.tag}</strong>
+                            <span className="pass-text">PASSED</span>
+                          </div>
+                          <div className="value-section">
+                            <p><strong>Expected:</strong> {f.expected || "—"}</p>
+                            <p><strong>Extracted:</strong> {f.extracted || "—"}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                </div>
+              )}
             </div>
           ))}
+
+          {/* Loading State */}
+          {loading && (
+            <div className="message bot">
+              <TypingMessage text="🔎 Running OCR + Validation + AI checks..." />
+            </div>
+          )}
+
+          {/* NEW VALIDATION BUTTON */}
+          {messages.length > 0 && !loading && (
+            <div className="new-validation-wrapper">
+              <button
+                className="new-validation-btn"
+                onClick={handleNewValidation}
+              >
+                🔄 New Validation
+              </button>
+            </div>
+          )}
         </div>
-      )}
+
+        {/* ================= FORM PANEL ================= */}
+        <form className="upload-panel" onSubmit={handleSubmit}>
+
+          <div className="upload-group">
+            <label>📑 Select Form</label>
+            <select
+              value={formNumber}
+              onChange={(e) => setFormNumber(e.target.value)}
+            >
+              {forms.map((form, i) => (
+                <option key={i} value={form}>{form}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="upload-group">
+            <label>📄 Upload Filled Form (PDF)</label>
+            <input
+              type="file"
+              accept=".pdf"
+              onChange={handleFileChange}
+              key={pdfFile ? pdfFile.name : "empty"}
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="upload-button"
+          >
+            {loading ? "Validating…" : "Validate Form"}
+          </button>
+
+        </form>
+
+      </div>
     </div>
   );
 }
