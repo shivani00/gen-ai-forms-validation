@@ -1,39 +1,28 @@
 {
-    "forms": [
-        {
-            "formId": "FR-01",
-            "data": {
-                "policy": {
-                    "policyName": "Private Motor Vehicle Insurance Policy",
-                    "insurerName": "SecureDrive Insurance Company Limited",
-                    "governingAct": "Motor Vehicles Act 1988",
-                    "insuredDeclaredValue": "500000",
-                    "regulatoryCompliance": "IRDAI Guidelines Applicable",
-                    "authorizedSignatory": "Chief Underwriting Officer"
-                }
-            }
-        },
-        {
-            "formId": "FR-02",
-            "data": {
-                "policy": {
-                    "policyNumber": "POL123456",
-                    "policyType": "Comprehensive",
-                    "effectiveDate": "2025-01-01",
-                    "expiryDate": "2026-01-01"
-                }
-            }
-        },
-        {
-            "formId": "FR-03",
-            "data": {
-                "vehicle": {
-                    "registrationNumber": "MH12AB1234",
-                    "engineNumber": "ENG998877",
-                    "chassisNumber": "CHS554433",
-                    "model": "Honda City"
-                }
-            }
-        }
-    ]
+  "data": {
+    "customer": {
+      "name": "Rahul Sharma"
+    },
+    "policy": {
+      "policyNumber": "SD-2026-IND-458922",
+      "startDate": "01-Apr-2026",
+      "endDate": "31-Mar-2027",
+      "premiumTotal": 18750,
+      "idv": 1250000,
+      "compulsoryDeductible": 1000,
+      "riders": [
+        "Zero Depreciation Cover",
+        "Engine Protection",
+        "Roadside Assistance"
+      ]
+    },
+    "vehicle": {
+      "makeModel": "Hyundai Creta 2024",
+      "registrationNumber": "DL01AB1234",
+      "engineNumber": "ENG4578123XY",
+      "chassisNumber": "CHS9988776655",
+      "seatingCapacity": 5,
+      "fuelType": "Petrol"
+    }
+  }
 }

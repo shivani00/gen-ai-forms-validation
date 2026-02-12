@@ -4,7 +4,7 @@ from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import UPLOAD_DIR, SPEC_DIR
-from core.pdf_renderer import render_pdf_page_base64
+from core.pdf_renderer import find_form_page, render_pdf_page_base64
 from core.word_parser import extract_word_spec
 from core.json_loader import load_full_json
 from core.vision_validator import validate_with_vision
@@ -37,7 +37,18 @@ async def validate_form(
         shutil.copyfileobj(pdf.file, f)
 
     # Convert PDF page to image (page 0 assumed)
-    pdf_image_b64 = render_pdf_page_base64(pdf_path, page_number=0)
+    page_number = find_form_page(pdf_path, form_id)
+
+    if page_number == -1:
+        return {
+            "status": "failed",
+            "error": f"Form {form_id} not found in uploaded PDF."
+        }
+
+    print(f"Detected {form_id} on page {page_number}")
+
+    # Convert correct page to image
+    pdf_image_b64 = render_pdf_page_base64(pdf_path, page_number=page_number)
 
     # Load Word spec
     word_path = os.path.join(SPEC_DIR, f"{form_id}_spec.docx")
