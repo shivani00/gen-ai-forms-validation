@@ -1,0 +1,39 @@
+{
+    "forms": [
+        {
+            "formId": "FR-01",
+            "data": {
+                "policy": {
+                    "policyName": "Private Motor Vehicle Insurance Policy",
+                    "insurerName": "SecureDrive Insurance Company Limited",
+                    "governingAct": "Motor Vehicles Act 1988",
+                    "insuredDeclaredValue": "500000",
+                    "regulatoryCompliance": "IRDAI Guidelines Applicable",
+                    "authorizedSignatory": "Chief Underwriting Officer"
+                }
+            }
+        },
+        {
+            "formId": "FR-02",
+            "data": {
+                "policy": {
+                    "policyNumber": "POL123456",
+                    "policyType": "Comprehensive",
+                    "effectiveDate": "2025-01-01",
+                    "expiryDate": "2026-01-01"
+                }
+            }
+        },
+        {
+            "formId": "FR-03",
+            "data": {
+                "vehicle": {
+                    "registrationNumber": "MH12AB1234",
+                    "engineNumber": "ENG998877",
+                    "chassisNumber": "CHS554433",
+                    "model": "Honda City"
+                }
+            }
+        }
+    ]
+}
