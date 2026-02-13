@@ -8,19 +8,17 @@ import {
   Upload,
   Send,
   Layers,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
+
 import "./styles.css";
 
 export default function App() {
   const [messages, setMessages] = useState([]);
   const [pdfFile, setPdfFile] = useState(null);
-  const [formId, setFormId] = useState("FR-01");
   const [loading, setLoading] = useState(false);
-
-  // 🔥 NEW: store validation history
   const [summaryHistory, setSummaryHistory] = useState([]);
-
-  const forms = ["FR-01", "FR-02", "FR-34"];
 
   const handleSubmit = async () => {
     if (!pdfFile) {
@@ -30,28 +28,26 @@ export default function App() {
 
     setMessages((prev) => [
       ...prev,
-      { role: "user", text: `Validate ${formId}` },
+      { role: "user", text: "Validate uploaded policy document" },
     ]);
 
     setLoading(true);
 
     const fd = new FormData();
     fd.append("pdf", pdfFile);
-    fd.append("form_id", formId);
 
     try {
       const res = await validateForm(fd);
 
       setMessages((prev) => [
         ...prev,
-        { role: "bot", data: res.validation },
+        { role: "bot", data: res },
       ]);
 
-      // 🔥 Store summary instead of replacing
+      // Store entire validation session in history
       setSummaryHistory((prev) => [
         {
-          formId,
-          ...res.validation,
+          ...res,
           timestamp: new Date().toLocaleTimeString(),
         },
         ...prev,
@@ -68,11 +64,11 @@ export default function App() {
 
   return (
     <div className="layout">
-      {/* LEFT MAIN PANEL */}
+      {/* LEFT PANEL */}
       <div className="app-container">
         <div className="header">
           <ShieldCheck size={28} />
-          <span>Insurance Forms Validation Agent</span>
+          <span>Insurance Policy Validation Agent</span>
         </div>
 
         <div className="chat-box">
@@ -80,7 +76,7 @@ export default function App() {
             <div key={i} className={`message ${msg.role}`}>
               {msg.text && <div className="bubble">{msg.text}</div>}
 
-              {msg.data && <ValidationResults data={msg.data} />}
+              {msg.data && <ValidationSession data={msg.data} />}
             </div>
           ))}
 
@@ -94,20 +90,9 @@ export default function App() {
         </div>
 
         <div className="input-panel">
-          <select
-            value={formId}
-            onChange={(e) => setFormId(e.target.value)}
-          >
-            {forms.map((f) => (
-              <option key={f} value={f}>
-                {f}
-              </option>
-            ))}
-          </select>
-
           <label className="file-upload">
             <Upload size={16} />
-            {pdfFile ? pdfFile.name : "Upload PDF"}
+            {pdfFile ? pdfFile.name : "Upload Policy PDF"}
             <input
               type="file"
               accept=".pdf"
@@ -123,7 +108,7 @@ export default function App() {
         </div>
       </div>
 
-      {/* RIGHT SUMMARY HISTORY PANEL */}
+      {/* RIGHT PANEL */}
       <div className="summary-panel">
         <div className="summary-title">
           <Layers size={18} />
@@ -144,104 +129,80 @@ export default function App() {
   );
 }
 
-/* ================= VALIDATION RESULT ================= */
+/* ================= MULTI-FORM SESSION VIEW ================= */
 
-function ValidationResults({ data }) {
+function ValidationSession({ data }) {
+  if (data.status !== "completed") {
+    return <div className="bubble">Validation failed.</div>;
+  }
+
   return (
     <div className="result-card">
-      <div
-        className={`overall ${
-          data.overall_status === "PASS"
-            ? "overall-pass"
-            : "overall-fail"
-        }`}
-      >
-        {data.overall_status === "PASS" ? (
-          <CheckCircle size={20} />
-        ) : (
-          <XCircle size={20} />
-        )}
-        Overall Status: {data.overall_status}
+      <div className="overall overall-pass">
+        <CheckCircle size={20} />
+        Total Forms Detected: {data.total_forms}
       </div>
 
-      {data.results.map((r, index) => (
-        <div
-          key={index}
-          className={`field-card ${
-            r.status === "PASS" ? "pass" : "fail"
-          }`}
-        >
-          <div className="field-header">
-            <FileText size={16} />
-            <strong>{r.json_path}</strong>
-          </div>
+      {Array.isArray(data.results) &&
+  data.results.map((form, index) => (
+    <FormResult key={index} form={form} />
+  ))}
 
-          <div className="field-grid">
-            <div>Expected</div>
-            <div>{r.expected_value}</div>
-
-            <div>Value from Form PDF</div>
-            <div>{r.actual_value || "Not Found"}</div>
-
-            <div>Value Match</div>
-            <div>{r.value_match ? "✅" : "❌"}</div>
-
-            <div>Position Match</div>
-            <div>{r.position_match ? "✅" : "❌"}</div>
-
-            <div>Reason</div>
-            <div>{r.reason}</div>
-          </div>
-        </div>
-      ))}
     </div>
   );
 }
 
-/* ================= SUMMARY CARD ================= */
+function FormResult({ form }) {
+  const [expanded, setExpanded] = useState(false);
 
-function SummaryCard({ data }) {
-  const total = data.results.length;
-  const passed = data.results.filter((r) => r.status === "PASS").length;
+  if (form.status !== "completed") {
+    return (
+      <div className="form-card fail">
+        <div className="form-header">
+          <strong>{form.form_id}</strong>
+        </div>
+        <div>{form.error}</div>
+      </div>
+    );
+  }
+
+  const results =
+  form?.validation && Array.isArray(form.validation.results)
+    ? form.validation.results
+    : [];
+
+  const total = results.length;
+  const passed = results.filter((r) => r.status === "PASS").length;
   const failed = total - passed;
-  const percentage = Math.round((passed / total) * 100);
+  const percentage = total > 0 ? Math.round((passed / total) * 100) : 0;
+
+  const isPass = percentage === 100;
 
   return (
     <div
-      className={`summary-card ${
-        data.overall_status === "PASS" ? "glow-pass" : "glow-fail"
-      }`}
+      className={`form-card ${isPass ? "glow-pass" : "glow-fail"}`}
     >
-      <div className="summary-header">
-        <span className="summary-form">
-          Form: {data.formId}
-        </span>
-        <span className="summary-time">{data.timestamp}</span>
-      </div>
-
+      {/* HEADER */}
       <div
-        className={`summary-status ${
-          data.overall_status === "PASS" ? "pass" : "fail"
-        }`}
+        className="form-header clickable"
+        onClick={() => setExpanded(!expanded)}
       >
-        {data.overall_status}
+        <div className="form-title">
+          {isPass ? (
+            <CheckCircle size={18} />
+          ) : (
+            <XCircle size={18} />
+          )}
+          <strong>{form.form_id}</strong>
+        </div>
+
+        <div className="form-metrics">
+          <span>{percentage}%</span>
+          {expanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+        </div>
       </div>
 
-      <div className="metric-row">
-        <div>Total</div>
-        <div>{total}</div>
-      </div>
-
-      <div className="metric-row pass-text">
-        <div>Passed</div>
-        <div>{passed}</div>
-      </div>
-
-      <div className="metric-row fail-text">
-        <div>Failed</div>
-        <div>{failed}</div>
-      </div>
-
+      {/* PROGRESS BAR */}
       <div className="progress-bar">
         <div
           className="progress-fill"
@@ -249,8 +210,59 @@ function SummaryCard({ data }) {
         />
       </div>
 
-      <div className="percentage">
-        {percentage}% Success Rate
+      <div className="mini-stats">
+        <span className="pass-text">✔ {passed}</span>
+        <span className="fail-text">✖ {failed}</span>
+        <span>Total: {total}</span>
+      </div>
+
+      {/* COLLAPSIBLE CONTENT */}
+      {expanded && (
+  <div className="form-details">
+    {results.map((r, index) => (
+      <div
+        key={index}
+        className={`field-row ${
+          r.status === "PASS" ? "pass" : "fail"
+        }`}
+      >
+        <div className="field-left">
+          <strong>{r.json_path}</strong>
+          <div className="field-reason">{r.reason}</div>
+        </div>
+
+        <div className="field-right">
+          <div>{r.status}</div>
+          <div className="small-text">
+            Expected: {r.expected_value || "—"}
+          </div>
+          <div className="small-text">
+            Actual: {r.actual_value || "—"}
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+)}
+
+    </div>
+  );
+}
+
+/* ================= SUMMARY CARD ================= */
+
+function SummaryCard({ data }) {
+  return (
+    <div className="summary-card glow-pass">
+      <div className="summary-header">
+        <span className="summary-form">
+          Forms: {data.total_forms}
+        </span>
+        <span className="summary-time">{data.timestamp}</span>
+      </div>
+
+      <div className="summary-status pass">
+        Completed
       </div>
     </div>
   );

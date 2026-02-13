@@ -1,28 +1,89 @@
 {
-  "data": {
-    "customer": {
-      "name": "Rahul Sharma"
-    },
-    "policy": {
-      "policyNumber": "SD-2026-IND-458922",
-      "startDate": "01-Apr-2026",
-      "endDate": "31-Mar-2027",
-      "premiumTotal": 18750,
-      "idv": 1250000,
-      "compulsoryDeductible": 1000,
-      "riders": [
-        "Zero Depreciation Cover",
-        "Engine Protection",
-        "Roadside Assistance"
-      ]
+  "policy": {
+    "policyNumber": "SD-2026-IND-458921",
+    "effectiveDate": "2026-04-01",
+    "expiryDate": "2027-03-31",
+    "insured": {
+      "name": "Rahul Sharma",
+      "contactNumber": "+91-9876543210",
+      "email": "rahul.sharma@email.com"
     },
     "vehicle": {
       "makeModel": "Hyundai Creta 2024",
       "registrationNumber": "DL01AB1234",
       "engineNumber": "ENG4578123XY",
       "chassisNumber": "CHS9988776655",
-      "seatingCapacity": 5,
-      "fuelType": "Petrol"
-    }
+      "fuelType": "Petrol",
+      "idv": 1250000
+    },
+    "premium": {
+      "totalPremium": 18750,
+      "currency": "INR"
+    },
+    "deductible": {
+      "compulsory": 1000
+    },
+    "addOns": [
+      {
+        "code": "ZERO_DEP",
+        "name": "Zero Depreciation Cover"
+      },
+      {
+        "code": "ENGINE_PROTECT",
+        "name": "Engine Protection Cover"
+      }
+    ],
+    "forms": [
+      {
+        "formCode": "FR-01",
+        "formName": "Auto Insurance Policy Document",
+        "version": "1.0",
+        "sequence": 1,
+        "attached": true,
+        "formInfo": {
+          "policyNumber": "SD-2026-IND-458921",
+          "effectiveDate": "2026-04-01",
+          "expiryDate": "2027-03-31",
+          "insuredName": "Rahul Sharma",
+          "insurerName": "SecureDrive Insurance Company Limited",
+          "authorizedSignatory": "Digitally Signed"
+        }
+      },
+      {
+        "formCode": "FR-02",
+        "formName": "Policy Schedule",
+        "version": "1.0",
+        "sequence": 2,
+        "attached": true,
+        "formInfo": {
+          "policyNumber": "SD-2026-IND-458921",
+          "insuredName": "Rahul Sharma",
+          "policyStartDate": "2026-04-01",
+          "policyEndDate": "2027-03-31",
+          "premiumAmount": 18750,
+          "insuredDeclaredValue": 1250000,
+          "deductible": 1000,
+          "currency": "INR"
+        }
+      },
+      {
+        "formCode": "FR-34",
+        "formName": "Vehicle & Rider Details",
+        "version": "1.0",
+        "sequence": 3,
+        "attached": true,
+        "formInfo": {
+          "vehicleMakeModel": "Hyundai Creta 2024",
+          "registrationNumber": "DL01AB1234",
+          "engineNumber": "ENG4578123XY",
+          "chassisNumber": "CHS9988776655",
+          "fuelType": "Petrol",
+          "riders": [
+            "Zero Depreciation Cover",
+            "Engine Protection Cover"
+          ]
+        }
+      }
+    ]
   }
 }

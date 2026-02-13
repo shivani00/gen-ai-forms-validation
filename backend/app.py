@@ -25,50 +25,75 @@ app.add_middleware(
 
 @app.post("/validate")
 async def validate_form(
-    pdf: UploadFile = File(...),
-    form_id: str = Form(...)
+    pdf: UploadFile = File(...)
 ):
-
-    print("Call coming to app.py with form_id:", form_id)
     # Save uploaded PDF
     pdf_path = os.path.join(UPLOAD_DIR, pdf.filename)
 
     with open(pdf_path, "wb") as f:
         shutil.copyfileobj(pdf.file, f)
 
-    # Convert PDF page to image (page 0 assumed)
-    page_number = find_form_page(pdf_path, form_id)
-
-    if page_number == -1:
+    # Load JSON to extract form codes
+    full_json = load_full_json()
+    
+    # Extract form codes from policy.forms[]
+    forms = full_json.get("policy", {}).get("forms", [])
+    
+    if not forms:
         return {
             "status": "failed",
-            "error": f"Form {form_id} not found in uploaded PDF."
+            "error": "No forms found in policy data."
         }
+    
+    validation_results = []
+    
+    # Validate each form in the policy
+    for form in forms:
+        form_id = form.get("formCode")
+        
+        if not form_id:
+            continue
+        
+        print(f"Processing form with form_id: {form_id}")
+        
+        # Convert PDF page to image
+        page_number = find_form_page(pdf_path, form_id)
 
-    print(f"Detected {form_id} on page {page_number}")
+        if page_number == -1:
+            validation_results.append({
+                "form_id": form_id,
+                "status": "failed",
+                "error": f"Form {form_id} not found in uploaded PDF."
+            })
+            continue
 
-    # Convert correct page to image
-    pdf_image_b64 = render_pdf_page_base64(pdf_path, page_number=page_number)
+        print(f"Detected {form_id} on page {page_number}")
 
-    # Load Word spec
-    word_path = os.path.join(SPEC_DIR, f"{form_id}_spec.docx")
+        # Convert correct page to image
+        pdf_image_b64 = render_pdf_page_base64(pdf_path, page_number=page_number)
 
-    template_image_b64, mapping_table = extract_word_spec(word_path)
+        # Load Word spec
+        word_path = os.path.join(SPEC_DIR, f"{form_id}_spec.docx")
 
-    # Load JSON
-    full_json = load_full_json()
+        template_image_b64, mapping_table = extract_word_spec(word_path)
 
-    # Vision validation
-    result = validate_with_vision(
-        form_id,
-        template_image_b64,
-        pdf_image_b64,
-        mapping_table,
-        full_json
-    )
+        # Vision validation
+        result = validate_with_vision(
+            form_id,
+            template_image_b64,
+            pdf_image_b64,
+            mapping_table,
+            full_json
+        )
 
+        validation_results.append({
+            "form_id": form_id,
+            "status": "completed",
+            "validation": result
+        })
+    print(f"validation_results: {validation_results}")
     return {
         "status": "completed",
-        "form_id": form_id,
-        "validation": result
+        "total_forms": len(forms),
+        "results": validation_results
     }
