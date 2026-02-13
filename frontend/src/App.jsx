@@ -3,7 +3,6 @@ import { validateForm } from "./api";
 import {
   CheckCircle,
   XCircle,
-  FileText,
   ShieldCheck,
   Upload,
   Send,
@@ -44,18 +43,14 @@ export default function App() {
         { role: "bot", data: res },
       ]);
 
-      // Store entire validation session in history
       setSummaryHistory((prev) => [
-        {
-          ...res,
-          timestamp: new Date().toLocaleTimeString(),
-        },
+        { ...res, timestamp: new Date().toLocaleTimeString() },
         ...prev,
       ]);
     } catch {
       setMessages((prev) => [
         ...prev,
-        { role: "bot", text: "Validation failed. Please try again." },
+        { role: "bot", text: "Validation failed." },
       ]);
     }
 
@@ -75,16 +70,13 @@ export default function App() {
           {messages.map((msg, i) => (
             <div key={i} className={`message ${msg.role}`}>
               {msg.text && <div className="bubble">{msg.text}</div>}
-
               {msg.data && <ValidationSession data={msg.data} />}
             </div>
           ))}
 
           {loading && (
-            <div className="message bot">
-              <div className="bubble loading">
-                🔄 Processing validation...
-              </div>
+            <div className="bubble loading">
+              🔄 Processing validation...
             </div>
           )}
         </div>
@@ -112,24 +104,24 @@ export default function App() {
       <div className="summary-panel">
         <div className="summary-title">
           <Layers size={18} />
-          <span>Validation History</span>
+          <span>Forms Summary</span>
         </div>
 
         {summaryHistory.length === 0 ? (
-          <div className="empty-summary">
-            No validations yet.
-          </div>
+          <div className="empty-summary">No validations yet.</div>
         ) : (
-          summaryHistory.map((item, index) => (
-            <SummaryCard key={index} data={item} />
-          ))
+          summaryHistory.map((session, index) =>
+            session.results.map((form, idx) => (
+              <SideFormCard key={`${index}-${idx}`} form={form} />
+            ))
+          )
         )}
       </div>
     </div>
   );
 }
 
-/* ================= MULTI-FORM SESSION VIEW ================= */
+/* ================= SESSION ================= */
 
 function ValidationSession({ data }) {
   if (data.status !== "completed") {
@@ -138,131 +130,135 @@ function ValidationSession({ data }) {
 
   return (
     <div className="result-card">
-      <div className="overall overall-pass">
-        <CheckCircle size={20} />
-        Total Forms Detected: {data.total_forms}
-      </div>
-
-      {Array.isArray(data.results) &&
-  data.results.map((form, index) => (
-    <FormResult key={index} form={form} />
-  ))}
-
+      {data.results.map((form, index) => (
+        <FormResult key={index} form={form} />
+      ))}
     </div>
   );
 }
 
+/* ================= FORM RESULT ================= */
+
 function FormResult({ form }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
 
   if (form.status !== "completed") {
     return (
       <div className="form-card fail">
-        <div className="form-header">
-          <strong>{form.form_id}</strong>
-        </div>
+        <div className="form-id">{form.form_id}</div>
         <div>{form.error}</div>
       </div>
     );
   }
 
-  const results =
-  form?.validation && Array.isArray(form.validation.results)
-    ? form.validation.results
-    : [];
-
+  const results = form.validation?.results || [];
   const total = results.length;
   const passed = results.filter((r) => r.status === "PASS").length;
   const failed = total - passed;
-  const percentage = total > 0 ? Math.round((passed / total) * 100) : 0;
-
+  const percentage = total ? Math.round((passed / total) * 100) : 0;
   const isPass = percentage === 100;
 
   return (
-    <div
-      className={`form-card ${isPass ? "glow-pass" : "glow-fail"}`}
-    >
+    <div className={`form-card ${isPass ? "glow-pass" : "glow-fail"}`}>
       {/* HEADER */}
       <div
         className="form-header clickable"
         onClick={() => setExpanded(!expanded)}
       >
         <div className="form-title">
-          {isPass ? (
-            <CheckCircle size={18} />
-          ) : (
-            <XCircle size={18} />
-          )}
-          <strong>{form.form_id}</strong>
+          {isPass ? <CheckCircle size={18} /> : <XCircle size={18} />}
+          <span className="form-id">{form.form_id}</span>
         </div>
 
         <div className="form-metrics">
-          <span>{percentage}%</span>
-          {expanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+          {percentage}% {expanded ? <ChevronUp size={18}/> : <ChevronDown size={18}/>}
         </div>
       </div>
 
-      {/* PROGRESS BAR */}
-      <div className="progress-bar">
-        <div
-          className="progress-fill"
-          style={{ width: `${percentage}%` }}
-        />
-      </div>
-
+      {/* STATS */}
       <div className="mini-stats">
         <span className="pass-text">✔ {passed}</span>
         <span className="fail-text">✖ {failed}</span>
         <span>Total: {total}</span>
       </div>
 
-      {/* COLLAPSIBLE CONTENT */}
+      {/* FIELD DETAILS */}
       {expanded && (
-  <div className="form-details">
-    {results.map((r, index) => (
-      <div
-        key={index}
-        className={`field-row ${
-          r.status === "PASS" ? "pass" : "fail"
-        }`}
-      >
-        <div className="field-left">
-          <strong>{r.json_path}</strong>
-          <div className="field-reason">{r.reason}</div>
-        </div>
+        <div className="form-details">
+          {results.map((r, index) => (
+            <div
+              key={index}
+              className={`field-block ${
+                r.status === "PASS" ? "pass" : "fail"
+              }`}
+            >
+              <div className="field-row">
+                <span>Expected:</span>
+                <span>{r.expected_value || "—"}</span>
+              </div>
 
-        <div className="field-right">
-          <div>{r.status}</div>
-          <div className="small-text">
-            Expected: {r.expected_value || "—"}
-          </div>
-          <div className="small-text">
-            Actual: {r.actual_value || "—"}
-          </div>
-        </div>
-      </div>
-    ))}
-  </div>
-)}
+              <div className="field-row">
+                <span>Value from PDF:</span>
+                <span>{r.actual_value || "—"}</span>
+              </div>
 
+              <div className="field-row">
+                <span>Value Match:</span>
+                <span>{r.value_match ? "✔" : "✖"}</span>
+              </div>
+
+              <div className="field-row">
+                <span>Position Match:</span>
+                <span>{r.position_match ? "✔" : "✖"}</span>
+              </div>
+
+              <div className="field-reason">
+                Reason: {r.reason}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-/* ================= SUMMARY CARD ================= */
+/* ================= RIGHT SUMMARY CARD ================= */
 
-function SummaryCard({ data }) {
+function SideFormCard({ form }) {
+  if (form.status !== "completed") return null;
+
+  const results = form.validation?.results || [];
+  const total = results.length;
+  const passed = results.filter((r) => r.status === "PASS").length;
+  const failed = total - passed;
+  const percentage = total ? Math.round((passed / total) * 100) : 0;
+  const isPass = percentage === 100;
+
   return (
-    <div className="summary-card glow-pass">
-      <div className="summary-header">
-        <span className="summary-form">
-          Forms: {data.total_forms}
+    <div className={`side-card ${isPass ? "glow-pass" : "glow-fail"}`}>
+      <div className="side-header">
+        <strong>{form.form_id}</strong>
+        <span className={`badge ${isPass ? "pass" : "fail"}`}>
+          {isPass ? "PASS" : "FAIL"}
         </span>
-        <span className="summary-time">{data.timestamp}</span>
       </div>
 
-      <div className="summary-status pass">
-        Completed
+      <div className="side-stats">
+        <div>✔ {passed}</div>
+        <div>✖ {failed}</div>
+        <div>Total: {total}</div>
+      </div>
+
+      <div className="side-progress">
+        <div
+          className="side-progress-fill"
+          style={{ width: `${percentage}%` }}
+        />
+      </div>
+
+      <div className="side-percentage">
+        {percentage}% Success Rate
       </div>
     </div>
   );
